@@ -1,29 +1,29 @@
 import Component from "@ember/component";
+import { action } from "@ember/object";
 import { inject as service } from "@ember/service";
+import { className, classNames, layout, tagName } from "@ember-decorators/component";
+import { on } from "@ember-decorators/object";
 import HotkeyMixin from "ui/components/-mixins/hotkey";
-import layout from "./template.hbs";
+import { hotkey, hotkeysNamespace } from "utils/decorators";
+import template from "./template.hbs";
 import "./styles.less";
 
 
-export default Component.extend( HotkeyMixin, {
-	modal: service(),
+@layout( template )
+@tagName( "section" )
+@classNames( "modal-dialog-component" )
+@hotkeysNamespace( "modaldialog" )
+export default class ModalDialogComponent extends Component.extend( HotkeyMixin ) {
+	/** @type {ModalService} */
+	@service modal;
 
-	layout,
-
-	tagName: "section",
-	classNameBindings: [ ":modal-dialog-component", "class" ],
-
-	"class": "",
-
-	hotkeysNamespace: "modaldialog",
-	hotkeys: {
-		close: "close"
-	},
+	@className
+	class = "";
 
 	/** @type {string} Set by the modal-service-component on component init */
-	modalName: "",
+	modalName = "";
 	/** @type {Object} Set by the modal-service-component on component init */
-	modalContext: null,
+	modalContext = null;
 
 	/*
 	 * Since Ember will try to re-use the same DOM element when only the modalContext changes and
@@ -36,13 +36,14 @@ export default Component.extend( HotkeyMixin, {
 			const { element } = this;
 			element.parentNode.replaceChild( element, element );
 		});
-	},
+	}
 
 	/*
 	 * This will be called synchronously, so we need to copy the element and animate it instead
 	 */
-	willDestroyElement() {
-		const { element } = this;
+	@on( "willDestroyElement" )
+	_fadeOut() {
+		const element = this.element;
 		let clone = element.cloneNode( true );
 		clone.classList.add( "fadeOut" );
 		element.parentNode.appendChild( clone );
@@ -50,12 +51,17 @@ export default Component.extend( HotkeyMixin, {
 			clone.parentNode.removeChild( clone );
 			clone = null;
 		}, { once: true } );
-	},
-
-
-	actions: {
-		close() {
-			this.modal.closeModal( this.modalContext, this.modalName );
-		}
 	}
-});
+
+
+	@hotkey( "close" )
+	hotkeyClose() {
+		this.send( "close" );
+	}
+
+
+	@action
+	close() {
+		this.modal.closeModal( this.modalContext, this.modalName );
+	}
+}

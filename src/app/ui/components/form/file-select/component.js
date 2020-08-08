@@ -1,45 +1,54 @@
 import Component from "@ember/component";
-import { get, set, computed } from "@ember/object";
-import { on } from "@ember/object/evented";
+import { set, action } from "@ember/object";
 import { inject as service } from "@ember/service";
+import { classNames, layout, tagName } from "@ember-decorators/component";
+import { on } from "@ember-decorators/object";
+import { t } from "ember-i18n/decorator";
 import { platform } from "utils/node/platform";
-import layout from "./template.hbs";
+import template from "./template.hbs";
 
 
 const { hasOwnProperty } = {};
 const { isArray } = Array;
 
 
-export default Component.extend({
-	i18n: service(),
+@layout( template )
+@tagName( "div" )
+@classNames( "file-select-component", "input-group" )
+export default class FileSelectComponent extends Component {
+	/** {I18nService} */
+	@service i18n;
 
-	layout,
+	value = "";
+	disabled = false;
 
-	tagName: "div",
-	classNames: [ "input-group" ],
+	/** @type {HTMLInputElement} */
+	_input = null;
 
-	value: "",
-	disabled: false,
+	@t( "components.file-select.placeholder" )
+	_defaultPlaceholder;
 
-	placeholder: computed({
-		set( key, value ) {
-			if ( typeof value === "string" ) {
-				return value;
-			}
+	_placeholder = null;
 
-			if ( typeof value !== "object" || !hasOwnProperty.call( value, platform ) ) {
-				return get( this, "i18n" ).t( "components.file-select.placeholder" ).toString();
-			}
+	get placeholder() {
+		return this._placeholder || this._defaultPlaceholder;
+	}
+	set placeholder( value ) {
+		if ( typeof value === "string" ) {
+			this._placeholder = value;
 
+		} else if ( typeof value === "object" && hasOwnProperty.call( value, platform ) ) {
 			value = value[ platform ];
 
-			return isArray( value )
+			this._placeholder = isArray( value )
 				? value[ 0 ]
 				: value;
 		}
-	}),
+	}
 
-	_createInput: on( "didInsertElement", function() {
+
+	@on( "didInsertElement" )
+	_createInputElement() {
 		const input = this.element.ownerDocument.createElement( "input" );
 		input.classList.add( "hidden" );
 		input.setAttribute( "type", "file" );
@@ -50,13 +59,18 @@ export default Component.extend({
 			input.files.clear();
 		});
 		this._input = input;
-	}),
+	}
 
-	actions: {
-		selectfile() {
-			if ( !get( this, "disabled" ) ) {
-				this._input.dispatchEvent( new MouseEvent( "click", { bubbles: true } ) );
-			}
+	@on( "willDestroyElement" )
+	_destroyInputElement() {
+		this._input = null;
+	}
+
+
+	@action
+	selectfile() {
+		if ( !this.disabled ) {
+			this._input.dispatchEvent( new MouseEvent( "click", { bubbles: true } ) );
 		}
 	}
-});
+}

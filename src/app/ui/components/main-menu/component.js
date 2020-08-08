@@ -1,8 +1,10 @@
 import Component from "@ember/component";
 import { inject as service } from "@ember/service";
+import { classNames, layout, tagName } from "@ember-decorators/component";
 import HotkeyMixin from "ui/components/-mixins/hotkey";
+import { hotkey, hotkeysNamespace } from "utils/decorators";
 import { isDarwin } from "utils/node/platform";
-import layout from "./template.hbs";
+import template from "./template.hbs";
 import "./styles.less";
 
 
@@ -19,41 +21,41 @@ const hotkeyActionRouteMap = {
 };
 
 
-export default Component.extend( HotkeyMixin, /** @class MainMenuComponent */ {
+@layout( template )
+@tagName( "aside" )
+@classNames( "main-menu-component" )
+@hotkeysNamespace( "navigation" )
+export default class MainMenuComponent extends Component.extend( HotkeyMixin ) {
 	/** @type {RouterService} */
-	router: service(),
+	@service router;
 
-	layout,
-
-	classNames: [ "main-menu-component" ],
-	tagName: "aside",
-
-	hotkeysNamespace: "navigation",
-	hotkeys: {
-		/** @this {MainMenuComponent} */
-		refresh() {
-			// macOS has a menu bar with its own refresh hotkey
-			if ( isDarwin ) { return; }
-			this.router.refresh();
-		},
-		/** @this {MainMenuComponent} */
-		historyBack() {
-			this.router.history( -1 );
-		},
-		/** @this {MainMenuComponent} */
-		historyForward() {
-			this.router.history( +1 );
-		},
-		/** @this {MainMenuComponent} */
-		homepage() {
-			this.router.homepage();
-		},
-		...Object.entries( hotkeyActionRouteMap )
-			.reduce( ( obj, [ action, route ]) => Object.assign( obj, {
-				/** @this {MainMenuComponent} */
-				[ action ]() {
-					this.router.transitionTo( route );
-				}
-			}), {} )
+	@hotkey
+	refresh() {
+		// macOS has a menu bar with its own refresh hotkey
+		if ( isDarwin ) { return; }
+		this.router.refresh();
 	}
-});
+
+	@hotkey
+	historyBack() {
+		this.router.history( -1 );
+	}
+
+	@hotkey
+	historyForward() {
+		this.router.history( +1 );
+	}
+
+	@hotkey
+	homepage() {
+		this.router.homepage();
+	}
+}
+
+
+for ( const [ action, route ] of Object.entries( hotkeyActionRouteMap ) ) {
+	/** @this {MainMenuComponent} */
+	MainMenuComponent.prototype.hotkeys[ action ] = function() {
+		this.router.transitionTo( route );
+	};
+}

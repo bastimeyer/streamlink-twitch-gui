@@ -1,61 +1,64 @@
 import Component from "@ember/component";
-import { get, set, computed, observer } from "@ember/object";
-import { on } from "@ember/object/evented";
+import { set } from "@ember/object";
+import { className, classNames, layout } from "@ember-decorators/component";
+import { observes, on } from "@ember-decorators/object";
 import { cancel, later } from "@ember/runloop";
-import layout from "./template.hbs";
+import template from "./template.hbs";
 import "./styles.less";
 
 
-export default Component.extend({
-	layout,
+@layout( template )
+@classNames( "settings-submit-component" )
+export default class SettingsSubmitComponent extends Component {
+	isDirty = true;
+	disabled = false;
 
-	classNames: [ "settings-submit-component" ],
-	classNameBindings: [ "_enabled::faded" ],
+	delay = 1000;
 
-	isDirty: true,
-	disabled: false,
+	@className( "", "faded" )
+	_enabled = false;
 
-	delay: 1000,
+	apply() {}
+	discard() {}
 
-	apply() {},
-	discard() {},
-
-	_enabled: computed(function() {
-		return get( this, "isDirty" )
-			&& !get( this, "disabled" );
-	}),
+	@on( "init" )
+	_onInit() {
+		set( this, "_enabled", this.isDirty && !this.disabled );
+	}
 
 	// immediately set enabled when disabled property changes
-	_disabledObserver: observer( "disabled", function() {
-		let enabled = get( this, "disabled" )
+	@observes( "disabled" )
+	_disabledObserver() {
+		const enabled = this.disabled
 			? false
-			: get( this, "isDirty" );
+			: this.isDirty;
 		set( this, "_enabled", enabled );
-	}),
+	}
 
 	// isDirty === true:  immediately set enabled to true
 	// isDirty === false: wait and then set to false
-	_timeout: null,
-	_isDirtyObserver: observer( "isDirty", function() {
-		if ( get( this, "disabled" ) ) { return; }
+	_timeout = null;
+	@observes( "isDirty" )
+	_isDirtyObserver() {
+		if ( this.disabled ) { return; }
 
 		this._clearTimeout();
 
-		if ( get( this, "isDirty" ) ) {
+		if ( this.isDirty ) {
 			set( this, "_enabled", true );
 		} else {
-			let delay = get( this, "delay" );
 			this._timeout = later( () => {
 				set( this, "_enabled", false );
 				this._timeout = null;
-			}, delay );
+			}, this.delay );
 		}
-	}),
+	}
 
-	_clearTimeout: on( "willDestroyElement", function() {
+	@on( "willDestroyElement" )
+	_clearTimeout() {
 		if ( this._timeout ) {
 			cancel( this._timeout );
 			this._timeout = null;
 		}
-	})
-});
+	}
+}

@@ -1,4 +1,3 @@
-import { get, computed } from "@ember/object";
 import attr from "ember-data/attr";
 import Model from "ember-data/model";
 import { vars } from "config";
@@ -14,29 +13,28 @@ function getURL( url, time ) {
 /**
  * Return the image URL with an already set expiration time.
  * Or create a new expiration time if it hasn't been set yet.
- * @param {String} attr
- * @returns {Ember.ComputedProperty} Volatile computed property
+ * @param {string} attr
+ * @returns {function(): PropertyDescriptor}
  */
-function buffered( attr ) {
-	return computed(function() {
-		let exp = this[ `expiration_${attr}` ];
+const buffered = attr => () => ({
+	get() {
+		const exp = this[ `expiration_${attr}` ];
 
 		return exp
-			? getURL( get( this, `image_${attr}` ), exp )
-			: get( this, `${attr}Latest` );
-	}).volatile();
-}
+			? getURL( this[ `image_${attr}` ], exp )
+			: this[ `${attr}Latest` ];
+	}
+});
 
 /**
  * Return the image URL with an expiration parameter, so the latest version will be requested.
  * Update the expiration timer only once every X seconds.
- * @param {String} attr
- * @returns {Ember.ComputedProperty} Volatile computed property
+ * @param {string} attr
+ * @returns {function(): PropertyDescriptor}
  */
-function latest( attr ) {
-	// use a volatile property
-	return computed(function() {
-		const url = get( this, `image_${attr}` );
+const latest = attr => () => ({
+	get() {
+		const url = this[ `image_${attr}` ];
 
 		// use the same timestamp for `time` seconds
 		const key = `expiration_${attr}`;
@@ -49,30 +47,39 @@ function latest( attr ) {
 		}
 
 		return getURL( url, exp );
-	}).volatile();
-}
+	}
+});
 
 
-export default Model.extend({
+export default class TwitchImage extends Model {
 	// original attributes (renamed)
-	image_large: attr( "string" ),
-	image_medium: attr( "string" ),
-	image_small: attr( "string" ),
+	@attr( "string" )
+	image_large;
+	@attr( "string" )
+	image_medium;
+	@attr( "string" )
+	image_small;
 
 	// expiration times
-	expiration_large: null,
-	expiration_medium: null,
-	expiration_small: null,
+	expiration_large = null;
+	expiration_medium = null;
+	expiration_small = null;
 
 	// "request latest image version, but only every X seconds"
 	// should be used by a route's model hook
-	largeLatest: latest( "large" ),
-	mediumLatest: latest( "medium" ),
-	smallLatest: latest( "small" ),
+	@latest( "large" )
+	largeLatest;
+	@latest( "medium" )
+	mediumLatest;
+	@latest( "small" )
+	smallLatest;
 
 	// "use the previous expiration parameter"
 	// should be used by all image src attributes in the DOM
-	large: buffered( "large" ),
-	medium: buffered( "medium" ),
-	small: buffered( "small" )
-});
+	@buffered( "large" )
+	large;
+	@buffered( "medium" )
+	medium;
+	@buffered( "small" )
+	small;
+}
